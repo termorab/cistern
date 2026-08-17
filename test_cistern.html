@@ -1,0 +1,63 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Cistern card test</title>
+  <style>
+    body { font-family: system-ui, Roboto, Arial; padding: 16px; background:#f6fbff; }
+    cistern-level-card { display:block; width: 360px; margin: 24px 0; }
+  </style>
+</head>
+<body>
+  <h2>Test: cistern-level-card</h2>
+
+  <!-- load the card as a module (adjust path if you placed the JS elsewhere) -->
+  <script type="module">
+    // This test file assumes cistern_level_card.js is in the same directory (e.g. you copied both files to /config/www/)
+    import './cistern_level_card.js';
+
+    // After import, element is defined. Create one and put it into DOM:
+    const el = document.createElement('cistern-level-card');
+    el.setAttribute('style', 'display:block; width:360px;');
+    document.body.appendChild(el);
+
+    // Provide a fake hass object similar to Home Assistant shape
+    const fakeHass = {
+      locale: { language: 'en' },
+      states: {
+        // put your sensor id here
+        'sensor.water_tank_level': {
+          state: '42',
+          attributes: { unit_of_measurement: '%' }
+        }
+      }
+    };
+
+    // configure the card (setConfig is called in HA normally; call it here)
+    el.setConfig({
+      entity: 'sensor.water_tank_level',
+      min: 0,
+      max: 100,
+      width: 320,
+      height: 220,
+      color: '#0ea5a4',
+      show_value: true,
+      wave_amplitude: 8,
+      wave_length: 160,
+      title: 'Water tank'
+    });
+
+    // set hass to trigger rendering
+    el.hass = fakeHass;
+
+    // Optionally change the value to test animation / updates:
+    setTimeout(() => {
+      fakeHass.states['sensor.water_tank_level'].state = '78';
+      // assign new object to simulate HA state update
+      el.hass = Object.assign({}, fakeHass);
+    }, 3000);
+  </script>
+
+  <p>Open this file from a web server (or place in /config/www/ and access via Home Assistant at /local/test_cistern.html) to test the card.</p>
+</body>
+</html>
