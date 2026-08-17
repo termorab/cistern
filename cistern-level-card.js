@@ -146,41 +146,67 @@ class CisternLevelCard extends LitElement {
         <div class="cistern-wrap" role="img" aria-label="Cistern level ${Math.round(levelPercent * 100)}%">
           <svg viewBox="0 0 ${w} ${h}" width="${w}" height="${h}" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet">
             <defs>
-                <linearGradient id="emptyGrad" x1="0" x2="0" y1="0" y2="1">
-                <stop offset="0%" stop-color="#f8fbfd"/>
-                <stop offset="100%" stop-color="#e6eef3"/>
+                <!-- stronger, fully-opaque water gradient -->
+                <linearGradient id="waterGrad" x1="0" x2="0" y1="0" y2="1">
+                  <stop offset="0%" stop-color="${color}" stop-opacity="1" />
+                  <stop offset="60%" stop-color="${color}" stop-opacity="0.95" />
+                  <stop offset="100%" stop-color="#013246" stop-opacity="1" />
                 </linearGradient>
 
-                <pattern id="emptyHatch" width="8" height="8" patternUnits="userSpaceOnUse" patternTransform="rotate(30)">
-                  <rect width="8" height="8" fill="transparent" />
-                  <path d="M-1,1 l2,-2 M0,8 l8,-8 M7,9 l2,-2" stroke="rgba(0,0,0,0.06)" stroke-width="1"/>
+                <!-- empty area gradient (lighter) -->
+                <linearGradient id="emptyGrad" x1="0" x2="0" y1="0" y2="1">
+                  <stop offset="0%" stop-color="#fbfdfe"/>
+                  <stop offset="100%" stop-color="#e9f0f4"/>
+                </linearGradient>
+
+                <!-- small diagonal hatch, very subtle -->
+                <pattern id="emptyHatch" width="12" height="12" patternUnits="userSpaceOnUse" patternTransform="rotate(30)">
+                  <rect width="12" height="12" fill="transparent" />
+                  <path d="M-1,1 l4,-4 M0,12 l12,-12 M11,13 l4,-4" stroke="rgba(0,0,0,0.035)" stroke-width="1"/>
                 </pattern>
-            </defs>
+
+                <!-- clip to cistern interior -->
+                <clipPath id="cisternClip">
+                  <rect x="18" y="16" rx="10" ry="10" width="${w - 36}" height="${h - 40}" />
+                </clipPath>
+
+                <!-- subtle inner shadow filter for waterline -->
+                <filter id="innerShadow" x="-50%" y="-50%" width="200%" height="200%">
+                  <feGaussianBlur stdDeviation="3" result="blur"/>
+                  <feOffset dx="0" dy="2" result="off"/>
+                  <feComposite in="off" in2="SourceAlpha" operator="out" result="inner"/>
+                  <feColorMatrix in="inner" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 0.25 0" />
+                  <feBlend in="SourceGraphic" in2="inner" mode="normal"/>
+                </filter>
+              </defs>
 
             <rect x="12" y="12" width="${w - 24}" height="${h - 28}" rx="14" ry="14" fill="${bg}" stroke="#9aa9b6" stroke-width="3" />
             <rect x="${w / 2 - 18}" y="2" width="36" height="16" rx="6" ry="6" fill="${bg}" stroke="#9aa9b6" stroke-width="2" />
 
             <g clip-path="url(#cisternClip)">
-              <!-- full empty background, so glass / shell is visible -->
+              <!-- background: empty glass look across the whole interior -->
               <rect x="0" y="0" width="${w}" height="${h}" fill="url(#emptyGrad)" />
 
-              <!-- Draw the empty area above the water level to visually emphasize empty space -->
+              <!-- empty area above the water -->
               <rect x="0" y="0" width="${w}" height="${waterHeightPx}" fill="url(#emptyGrad)" />
 
-              <!-- Optional subtle hatch overlay on empty area to further separate it -->
-              <rect x="0" y="0" width="${w}" height="${waterHeightPx}" fill="url(#emptyHatch)" opacity="0.28" />
+              <!-- subtle hatch overlay only on empty area (very faint) -->
+              <rect x="0" y="0" width="${w}" height="${waterHeightPx}" fill="url(#emptyHatch)" opacity="0.18" />
 
-              <!-- Water rectangle (only below the water line) -->
+              <!-- water rectangle: opaque, drawn BELOW the empty area so it shows clearly -->
               <rect x="0" y="${waterHeightPx}" width="${w}" height="${h - waterHeightPx}" fill="url(#waterGrad)" />
 
-              <!-- Waves on top of the water rectangle, with a thin top highlight stroke -->
+              <!-- faint highlight band at the top of the water to separate it from empty area -->
+              <rect x="0" y="${Math.max(0, waterHeightPx - 2)}" width="${w}" height="4" fill="rgba(0,0,0,0.06)" />
+
+              <!-- waves above the water rectangle (slightly more saturated so blue appears) -->
               <g style="mix-blend-mode: normal;">
-                <path class="wave" d="${wave1}" fill="url(#waterGrad)" opacity="0.95" stroke="rgba(255,255,255,0.06)" stroke-width="1" />
-                <path class="wave slow" d="${wave2}" fill="url(#waterGrad)" opacity="0.9" stroke="rgba(0,0,0,0.06)" stroke-width="0.6" />
+                <path class="wave" d="${wave1}" fill="url(#waterGrad)" opacity="1" stroke="rgba(255,255,255,0.08)" stroke-width="1" />
+                <path class="wave slow" d="${wave2}" fill="url(#waterGrad)" opacity="0.95" stroke="rgba(0,0,0,0.08)" stroke-width="0.6" />
               </g>
 
-              <!-- Add a subtle top-shade for the water line (faint dark band to accentuate separation) -->
-              <rect x="0" y="${Math.max(0, waterHeightPx - 2)}" width="${w}" height="4" fill="rgba(0,0,0,0.04)" />
+              <!-- inner shadow applied to the water area to add depth (use filter) -->
+              <rect x="0" y="${waterHeightPx}" width="${w}" height="${h - waterHeightPx}" fill="transparent" filter="url(#innerShadow)"/>
             </g>
 
             <ellipse cx="${w / 2}" cy="${waterHeightPx - 16}" rx="${Math.max(16, w * 0.07)}" ry="4" fill="rgba(255,255,255,0.25)" />
