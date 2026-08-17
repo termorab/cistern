@@ -90,13 +90,29 @@ class CisternLevelCard extends LitElement {
       :host { display:block; box-sizing: border-box; }
       .card { width:100%; height:100%; box-sizing:border-box; display:flex; align-items:center; justify-content:center; padding:8px; }
       .cistern-wrap { width: var(--cistern-width,320px); height: var(--cistern-height,220px); position:relative; }
-      .value-label { position:absolute; left:50%; transform:translateX(-50%); bottom:8px; font-weight:600; background: rgba(255,255,255,0.85); padding:4px 8px; border-radius:6px; box-shadow:0 2px 6px rgba(0,0,0,0.12); font-family:system-ui, Roboto, Arial; }
+      .value-label {
+          position: absolute;
+          left: 50%;
+          transform: translateX(-50%);
+          bottom: 10px;
+          font-weight: 700;
+          background: rgba(255,255,255,0.95);
+          color: #0f172a; /* dark text */
+          padding: 6px 10px;
+          border-radius: 8px;
+          box-shadow: 0 4px 10px rgba(2,6,23,0.18);
+          border: 1px solid rgba(15,23,42,0.06);
+          font-family: system-ui, Roboto, "Helvetica Neue", Arial;
+          font-size: 13px;
+          min-width: 56px;
+          text-align: center;
+        }
       .wave { animation: waveMove 6s linear infinite; }
-      .wave.slow { animation-duration: 10s; }
-      @keyframes waveMove { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
-      .bubble { animation: floatUp 6s ease-in-out infinite; }
-      @keyframes floatUp { 0% { transform:translateY(0) translateX(0); opacity:0.9; } 50% { transform:translateY(-10px) translateX(6px); opacity:1; } 100% { transform:translateY(0) translateX(0); opacity:0.9; } }
-    `;
+          .wave.slow { animation-duration: 10s; }
+          @keyframes waveMove { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
+          .bubble { animation: floatUp 6s ease-in-out infinite; }
+          @keyframes floatUp { 0% { transform:translateY(0) translateX(0); opacity:0.9; } 50% { transform:translateY(-10px) translateX(6px); opacity:1; } 100% { transform:translateY(0) translateX(0); opacity:0.9; } }
+        `;
   }
 
   _makeWavePath(width, height, amplitude, wavelength, offsetX, waterY) {
@@ -127,31 +143,47 @@ class CisternLevelCard extends LitElement {
 
     return html`
       <div class="card" style="--cistern-width:${w}px; --cistern-height:${h}px;">
-        <div class="cistern-wrap" role="img" aria-label="Cistern level ${Math.round(levelPercent*100)}%">
+        <div class="cistern-wrap" role="img" aria-label="Cistern level ${Math.round(levelPercent * 100)}%">
           <svg viewBox="0 0 ${w} ${h}" width="${w}" height="${h}" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet">
             <defs>
-              <linearGradient id="waterGrad" x1="0" x2="0" y1="0" y2="1">
-                <stop offset="0%" stop-color="${color}" stop-opacity="0.95" />
-                <stop offset="70%" stop-color="${color}" stop-opacity="0.85" />
-                <stop offset="100%" stop-color="#0f172a" stop-opacity="0.35" />
-              </linearGradient>
-              <clipPath id="cisternClip"><rect x="18" y="16" rx="10" ry="10" width="${w - 36}" height="${h - 40}" /></clipPath>
+                <linearGradient id="emptyGrad" x1="0" x2="0" y1="0" y2="1">
+                <stop offset="0%" stop-color="#f8fbfd"/>
+                <stop offset="100%" stop-color="#e6eef3"/>
+                </linearGradient>
+
+                <pattern id="emptyHatch" width="8" height="8" patternUnits="userSpaceOnUse" patternTransform="rotate(30)">
+                  <rect width="8" height="8" fill="transparent" />
+                  <path d="M-1,1 l2,-2 M0,8 l8,-8 M7,9 l2,-2" stroke="rgba(0,0,0,0.06)" stroke-width="1"/>
+                </pattern>
             </defs>
 
             <rect x="12" y="12" width="${w - 24}" height="${h - 28}" rx="14" ry="14" fill="${bg}" stroke="#9aa9b6" stroke-width="3" />
-            <rect x="${w/2 - 18}" y="2" width="36" height="16" rx="6" ry="6" fill="${bg}" stroke="#9aa9b6" stroke-width="2" />
+            <rect x="${w / 2 - 18}" y="2" width="36" height="16" rx="6" ry="6" fill="${bg}" stroke="#9aa9b6" stroke-width="2" />
 
             <g clip-path="url(#cisternClip)">
-              <rect x="0" y="0" width="${w}" height="${h}" fill="url(#waterGrad)" opacity="0.92" />
-              <g style="mix-blend-mode: soft-light;">
-                <path class="wave" d="${wave1}" fill="${color}" opacity="0.28" />
-                <path class="wave slow" d="${wave2}" fill="${color}" opacity="0.36" />
+              <!-- full empty background, so glass / shell is visible -->
+              <rect x="0" y="0" width="${w}" height="${h}" fill="url(#emptyGrad)" />
+
+              <!-- Draw the empty area above the water level to visually emphasize empty space -->
+              <rect x="0" y="0" width="${w}" height="${waterHeightPx}" fill="url(#emptyGrad)" />
+
+              <!-- Optional subtle hatch overlay on empty area to further separate it -->
+              <rect x="0" y="0" width="${w}" height="${waterHeightPx}" fill="url(#emptyHatch)" opacity="0.28" />
+
+              <!-- Water rectangle (only below the water line) -->
+              <rect x="0" y="${waterHeightPx}" width="${w}" height="${h - waterHeightPx}" fill="url(#waterGrad)" />
+
+              <!-- Waves on top of the water rectangle, with a thin top highlight stroke -->
+              <g style="mix-blend-mode: normal;">
+                <path class="wave" d="${wave1}" fill="url(#waterGrad)" opacity="0.95" stroke="rgba(255,255,255,0.06)" stroke-width="1" />
+                <path class="wave slow" d="${wave2}" fill="url(#waterGrad)" opacity="0.9" stroke="rgba(0,0,0,0.06)" stroke-width="0.6" />
               </g>
 
-              ${levelPercent > 0.02 ? html`<g class="bubble" transform="translate(${w * 0.65}, ${waterHeightPx - 8})"><circle cx="0" cy="0" r="6" fill="rgba(255,255,255,0.85)" opacity="0.9"/><circle cx="-1" cy="-1" r="2.8" fill="rgba(255,255,255,0.98)"/></g>` : ``}
+              <!-- Add a subtle top-shade for the water line (faint dark band to accentuate separation) -->
+              <rect x="0" y="${Math.max(0, waterHeightPx - 2)}" width="${w}" height="4" fill="rgba(0,0,0,0.04)" />
             </g>
 
-            <ellipse cx="${w/2}" cy="${waterHeightPx - 16}" rx="${Math.max(16, w * 0.07)}" ry="4" fill="rgba(255,255,255,0.25)" />
+            <ellipse cx="${w / 2}" cy="${waterHeightPx - 16}" rx="${Math.max(16, w * 0.07)}" ry="4" fill="rgba(255,255,255,0.25)" />
             <g transform="translate(12, ${h - 28})" fill="#49606f" opacity="0.6"><text x="${w - 48}" y="10" font-size="12" text-anchor="end" font-family="system-ui, Roboto, Arial">${this._config.title ?? ''}</text></g>
           </svg>
 
