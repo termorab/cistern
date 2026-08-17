@@ -1,4 +1,6 @@
-/* cistern_level_card.js - corrected Lit import and hass handling */
+/* cistern_level_card.js
+  Code by copilot
+*/
 import { LitElement, html, css } from 'https://unpkg.com/lit@2.7.4/index.js?module';
 
 class CisternLevelCard extends LitElement {
