@@ -1,5 +1,6 @@
 {
   "name": "morab cistern level card",
-  "content_in_root": false,
-  "filename": "cistern-level-card.js"
+  "content_in_root": true,
+  "filename": "cistern-level-card.js",
+  "country": "DE"
 }
