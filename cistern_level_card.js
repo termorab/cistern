@@ -8,10 +8,8 @@
   - Add resource: /local/cistern-level-card.js (type: module)
   - Add card to Lovelace
 */
-
-const LitElementBase = window.LitElement || Object.getPrototypeOf(customElements.get('hui-view') || HTMLElement);
-
 import { html, css, LitElement } from 'https://unpkg.com/lit@2.7.4/index.js?module';
+const LitElementBase = window.LitElement || Object.getPrototypeOf(customElements.get('hui-view') || HTMLElement);
 
 // If environment where lit is not available as module, fallback to global LitElement
 const Lit = (typeof LitElement !== 'undefined') ? { LitElement, html, css } : { LitElement: LitElementBase, html: (t)=>t, css: ()=>{} };
