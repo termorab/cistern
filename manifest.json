@@ -2,7 +2,7 @@
   "domain": "cistern-level-card",
   "name": "Cistern Level Card",
   "version": "1.0.0",
-  "documentation": "https://github.com/termorab/cistern-level-card",
+  "documentation": "https://github.com/termorab/cistern",
   "dependencies": [],
   "codeowners": [termorab],
   "requirements": []
