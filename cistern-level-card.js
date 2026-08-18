@@ -77,7 +77,7 @@ class CisternLevelCard extends LitElement {
       fuel_entity: "",
       capacity: null,
       capacity_entity: "",
-      show_fuel: true,
+      show_Fuel: true,
       fuel_unit: "",
       fuel_decimals: 0,
       extra_entities: [],
