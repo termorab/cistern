@@ -2,25 +2,31 @@
   cistern-level-card.js
   Added support for reading extra HA values (fuel value, capacity, extra entities)
   and showing them on the card. Keeps previous fixes for gradients and contrast.
-  Fixes: align bottom badges and add background to extras box for readability.
+  Added features:
+   - positioned entities (entities array) with free positioning or batch anchoring
+   - batch anchoring: group entities into left/center/right batches anchored below the cistern
+   - small improvements to badge styling
 */
 
 import { LitElement, html, css } from 'https://unpkg.com/lit@2.7.4/index.js?module';
 
 const CARD_NAME = "Cistern Level Card";
-const CARD_VERSION = "1.0.0";
+const CARD_VERSION = "1.0.1";
 const CARD_TAGLINE = `${CARD_NAME} v${CARD_VERSION}`;
 
-console.info(`%c${CARD_TAGLINE}`, [
-  "background: rgba(255,152,0,0.95)",
-  "color: #fff",
-  "padding: 4px 10px",
-  "border-radius: 10px",
-  "font-weight: 800",
-  "letter-spacing: 0.2px",
-  "border: 1px solid rgba(0,0,0,0.25)",
-  "box-shadow: 0 1px 0 rgba(0,0,0,0.15)"
-].join(";"));
+console.info(
+  `%c${CARD_TAGLINE}`,
+  [
+    "background: rgba(255,152,0,0.95)",
+    "color: #fff",
+    "padding: 4px 10px",
+    "border-radius: 10px",
+    "font-weight: 800",
+    "letter-spacing: 0.2px",
+    "border: 1px solid rgba(0,0,0,0.25)",
+    "box-shadow: 0 1px 0 rgba(0,0,0,0.15)"
+  ].join(";")
+);
 
 class CisternLevelCard extends LitElement {
   static get properties() {
@@ -75,6 +81,8 @@ class CisternLevelCard extends LitElement {
       fuel_unit: "",
       fuel_decimals: 0,
       extra_entities: [],
+      // positioned entities (batches or individually positioned)
+      entities: [],
       // new UI options
       show_in_tank_percent: true,
       label_position: 'below' // 'inside' or 'below'
@@ -116,77 +124,29 @@ class CisternLevelCard extends LitElement {
     return decimals != null ? Number(n).toFixed(decimals) : String(n);
   }
 
-  set hass(hass) {
-    this._hass = hass;
+  /* Parse position: accepts number (percent), '50%', '120px' or plain number string
+     returns a CSS value string. */
+  _parsePos(v) {
+    if (v == null) return '50%';
+    if (typeof v === 'number') return `${v}%`;
+    const s = String(v).trim();
+    if (s.endsWith('%') || s.endsWith('px')) return s;
+    if (!Number.isNaN(Number(s))) return `${Number(s)}%`;
+    return s;
+  }
 
-    // main value
-    const rawVal = this._getNumber(this._config.entity, null);
-    this._value = rawVal;
-    this._unit = this._getUnit(this._config.entity);
-
-    // compute main percent
-    const min = Number(this._config.min);
-    const max = Number(this._config.max);
-    if (rawVal == null) {
-      this._percent = 0;
-    } else if (!Number.isFinite(min) || !Number.isFinite(max) || min === max) {
-      this._percent = 0;
-    } else {
-      let p = (rawVal - min) / (max - min);
-      if (Number.isNaN(p)) p = 0;
-      p = Math.max(0, Math.min(1, p));
-      this._percent = p;
+  _formatLabel(template, value, unit) {
+    if (!template) {
+      if (value == null) return '—';
+      return (unit ? `${value} ${unit}` : String(value));
     }
+    return String(template).replace('{value}', value == null ? '—' : value).replace('{unit}', unit || '');
+  }
 
-    // fuel value & capacity
-    this._fuelValue = null;
-    this._fuelUnit = this._config.fuel_unit || "";
-    this._fuelPercent = null;
-
-    if (this._config.fuel_entity) {
-      const fv = this._getNumber(this._config.fuel_entity, null);
-      this._fuelValue = fv;
-      if (!this._fuelUnit) {
-        this._fuelUnit = this._getAttribute(this._config.fuel_entity, 'unit_of_measurement', this._fuelUnit);
-      }
-    }
-
-    // capacity
-    let capacityVal = null;
-    if (this._config.capacity != null) {
-      const c = Number(this._config.capacity);
-      capacityVal = Number.isFinite(c) ? c : null;
-    } else if (this._config.capacity_entity) {
-      const cstate = this._getNumber(this._config.capacity_entity, null);
-      if (cstate != null) capacityVal = cstate;
-      else {
-        const attrCap = this._getAttribute(this._config.capacity_entity, 'capacity', null) ?? this._getAttribute(this._config.capacity_entity, 'volume', null);
-        if (attrCap != null) {
-          const nc = Number(attrCap);
-          if (Number.isFinite(nc)) capacityVal = nc;
-        }
-      }
-    }
-
-    // compute fuel percent if possible
-    if (this._fuelValue != null && Number.isFinite(Number(capacityVal)) && capacityVal > 0) {
-      this._fuelPercent = Math.max(0, Math.min(1, this._fuelValue / capacityVal));
-    } else {
-      this._fuelPercent = null;
-    }
-
-    // extras
-    this._extraValues = (this._config.extra_entities || []).map((it) => {
-      const ent = String(it.entity || '').trim();
-      let v = null;
-      if (!ent) return { label: it.label || ent, value: null, unit: it.unit || '' };
-      if (it.attribute) v = this._getAttribute(ent, it.attribute, null);
-      else v = this._getNumber(ent, null);
-      const unit = it.unit || this._getAttribute(ent, 'unit_of_measurement') || '';
-      return { label: it.label || ent, value: v, unit, decimals: (typeof it.decimals === 'number') ? it.decimals : 0 };
-    });
-
-    this.requestUpdate();
+  _onBadgeTap(entityId) {
+    if (!this._hass || !entityId) return;
+    const ev = new CustomEvent('hass-more-info', { detail: { entityId }, bubbles: true, composed: true });
+    this.dispatchEvent(ev);
   }
 
   getCardSize() {
@@ -197,7 +157,7 @@ class CisternLevelCard extends LitElement {
     return css`
       :host { display:block; box-sizing: border-box; }
       .card { width:100%; height:100%; box-sizing:border-box; display:flex; align-items:center; justify-content:center; padding:8px; }
-      .cistern-wrap { width: var(--cistern-width,320px); height: var(--cistern-height,220px); position:relative; }
+      .cistern-wrap { width: var(--cistern-width,320px); height: var(--cistern-height,220px); position:relative; overflow:visible; }
 
       .value-label {
         position: absolute;
@@ -218,7 +178,6 @@ class CisternLevelCard extends LitElement {
         z-index: 3;
       }
 
-      /* when label_position is below place the label outside the cistern */
       .value-label.below {
         bottom: -22px;
       }
@@ -230,37 +189,40 @@ class CisternLevelCard extends LitElement {
         text-anchor: middle;
       }
 
-      .fuel-box {
-        position: absolute;
-        left: 12px;
-        bottom: 12px;
-        background: rgba(255,255,255,0.95);
-        color: #0f172a;
-        padding: 6px 8px;
-        border-radius: 8px;
-        box-shadow: 0 3px 8px rgba(2,6,23,0.12);
-        font-size: 12px;
+      /* single badge */
+      .entity-badge {
+        display:inline-flex;
+        align-items:center;
+        gap:6px;
+        white-space:nowrap;
+        padding:6px 10px;
+        background: rgba(255,255,255,0.98);
+        color:#0f172a;
+        border-radius:8px;
+        box-shadow: 0 4px 10px rgba(2,6,23,0.12);
         border: 1px solid rgba(15,23,42,0.06);
-        min-width: 72px;
-        z-index: 3;
+        font-size:13px;
+        line-height:18px;
+        cursor:pointer;
+        user-select:none;
+        z-index: 4;
       }
+      .entity-badge .badge-icon { font-size:16px; display:inline-block; }
+      .entity-badge .badge-label { display:inline-block; }
+
+      /* batch container anchored left/center/right */
+      .badge-batch { position:absolute; display:inline-flex; gap:8px; align-items:center; z-index:4; }
+      .badge-batch.batch-left { left:12px; transform:none; }
+      .badge-batch.batch-right { right:12px; left:auto; transform:none; }
+      .badge-batch.batch-center { left:50%; transform:translateX(-50%); }
+      .badge-batch.below { bottom: -22px; }
+      .badge-batch.not-below { bottom: 12px; }
+
+      /* legacy fuel/extras styles kept for backward compatibility */
+      .fuel-box { position: absolute; left: 12px; bottom: 12px; background: rgba(255,255,255,0.95); color: #0f172a; padding: 6px 8px; border-radius: 8px; box-shadow: 0 3px 8px rgba(2,6,23,0.12); font-size: 12px; border: 1px solid rgba(15,23,42,0.06); min-width: 72px; z-index: 3; }
       .fuel-box.below { bottom: -22px; }
 
-      .extras-box {
-        position: absolute;
-        right: 12px;
-        bottom: 12px;
-        text-align: right;
-        font-size: 12px;
-        color: #475569;
-        background: rgba(255,255,255,0.95);
-        padding: 6px 8px;
-        border-radius: 8px;
-        box-shadow: 0 3px 8px rgba(2,6,23,0.08);
-        border: 1px solid rgba(15,23,42,0.06);
-        min-width: 72px;
-        z-index: 3;
-      }
+      .extras-box { position: absolute; right: 12px; bottom: 12px; text-align: right; font-size: 12px; color: #475569; background: rgba(255,255,255,0.95); padding: 6px 8px; border-radius: 8px; box-shadow: 0 3px 8px rgba(2,6,23,0.08); border: 1px solid rgba(15,23,42,0.06); min-width: 72px; z-index: 3; }
       .extras-box.below { bottom: -22px; }
 
       .wave { animation: waveMove 6s linear infinite; }
@@ -305,6 +267,51 @@ class CisternLevelCard extends LitElement {
 
     // choose if label is below
     const labelBelow = String(this._config.label_position || 'below').trim().toLowerCase() === 'below';
+
+    // positioned entities config
+    const entitiesCfg = Array.isArray(this._config.entities) ? this._config.entities : [];
+    // build batches: left / center / right
+    const batches = { left: [], center: [], right: [] };
+    const individuals = [];
+    entitiesCfg.forEach((c, idx) => {
+      const batch = (c.batch || c.anchor || '').toString().trim().toLowerCase();
+      if (batch === 'left' || batch === 'center' || batch === 'right') batches[batch].push({cfg: c, idx});
+      else individuals.push({cfg: c, idx});
+    });
+
+    // helper render for a single badge element
+    const renderBadge = (cfg, idx) => {
+      const entId = cfg.entity;
+      const raw = this._getRawState(entId);
+      const state = raw ? raw.state : null;
+      const unit = cfg.unit || (raw && raw.attributes && raw.attributes.unit_of_measurement) || '';
+      let value = state;
+      if (cfg.decimals != null && !Number.isNaN(Number(state))) value = Number(state).toFixed(cfg.decimals);
+      const label = this._formatLabel(cfg.label || cfg.format || '{value}', value, unit);
+      return html`<div class="entity-badge" role="button" tabindex="0" @click=${() => this._onBadgeTap(entId)} title="${entId}"><span class="badge-label">${label}</span></div>`;
+    };
+
+    // render individual positioned badges
+    const renderIndividual = (it) => {
+      const cfg = it.cfg || {};
+      const left = this._parsePos(cfg.x ?? cfg.left ?? '50%');
+      const top = this._parsePos(cfg.y ?? cfg.top ?? '88%');
+      // anchor/align affects transform
+      const anchor = (cfg.anchor || cfg.align || 'center').toString().toLowerCase();
+      let transform = '';
+      if (anchor === 'left') transform = 'translateX(0)';
+      else if (anchor === 'right') transform = 'translateX(-100%)';
+      else transform = 'translateX(-50%)';
+      return html`<div style="position:absolute; left:${left}; top:${top}; transform:${transform};">${renderBadge(cfg, it.idx)}</div>`;
+    };
+
+    // render batch container (horizontal inline badges)
+    const renderBatch = (which, items) => {
+      if (!items || items.length === 0) return html``;
+      const cls = `badge-batch batch-${which} ${labelBelow ? 'below' : 'not-below'}`;
+      // badges inside
+      return html`<div class="${cls}">${items.map(it => renderBadge(it.cfg, it.idx))}</div>`;
+    };
 
     return html`
       <div class="card" style="--cistern-width:${w}px; --cistern-height:${h}px;">
@@ -371,6 +378,15 @@ class CisternLevelCard extends LitElement {
 
           ${this._config.show_value ? html`<div class="value-label ${labelBelow ? 'below' : ''}">${this._value == null ? "unavailable" : `${this._value}${this._unit ? " " + this._unit : ""}`}</div>` : ``}
 
+          <!-- render batch anchors -->
+          ${renderBatch('left', batches.left)}
+          ${renderBatch('center', batches.center)}
+          ${renderBatch('right', batches.right)}
+
+          <!-- render individually positioned badges -->
+          ${individuals.map(it => renderIndividual(it))}
+
+          <!-- legacy fuel/extras display (kept for compatibility) -->
           ${this._config.show_fuel ? html`
             <div class="fuel-box ${labelBelow ? 'below' : ''}">
               ${this._fuelValue == null ? html`<div>Fuel: —</div>` : html`<div>Fuel: ${this._fmtVal(this._fuelValue, this._config.fuel_decimals)} ${this._fuelUnit || ''}</div>`}
