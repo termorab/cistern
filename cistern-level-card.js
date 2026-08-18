@@ -380,8 +380,8 @@ class CisternLevelCard extends LitElement {
           ` : ''}
 
           ${this._extraValues && this._extraValues.length ? html`
-            <div class="extras-box">
-              ${this._extraValues.map(e => html`<div class="value-label">${e.label}: ${e.value == null ? '—' : this._fmtVal(e.value, e.decimals)} ${e.unit || ''}</div>`) }
+            <div class="fuel-box">
+              ${this._extraValues.map(e => html`<div>${e.label}: ${e.value == null ? '—' : this._fmtVal(e.value, e.decimals)} ${e.unit || ''}</div>`) }
             </div>
           ` : ''}
 
