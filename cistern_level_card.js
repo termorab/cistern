@@ -2,6 +2,10 @@
   cistern-level-card.js
   Added support for reading extra HA values (fuel value, capacity, extra entities)
   and showing them on the card. Keeps previous fixes for gradients and contrast.
+  Added features:
+   - in-tank percent overlay with automatic contrast inversion
+   - label_position option ("inside" or "below") with default "below"
+   - show_in_tank_percent option
 */
 
 import { LitElement, html, css } from 'https://unpkg.com/lit@2.7.4/index.js?module';
@@ -58,7 +62,10 @@ class CisternLevelCard extends LitElement {
       show_fuel: true,
       fuel_unit: "",
       fuel_decimals: 0,
-      extra_entities: []
+      extra_entities: [],
+      // new UI options
+      show_in_tank_percent: true,
+      label_position: 'below' // 'inside' or 'below'
     }, config);
   }
 
@@ -141,7 +148,6 @@ class CisternLevelCard extends LitElement {
       const cstate = this._getNumber(this._config.capacity_entity, null);
       if (cstate != null) capacityVal = cstate;
       else {
-        // try attribute named 'capacity' or 'volume' or unit specific
         const attrCap = this._getAttribute(this._config.capacity_entity, 'capacity', null) ?? this._getAttribute(this._config.capacity_entity, 'volume', null);
         if (attrCap != null) {
           const nc = Number(attrCap);
@@ -197,6 +203,18 @@ class CisternLevelCard extends LitElement {
         font-size: 13px;
         min-width: 56px;
         text-align: center;
+      }
+
+      /* when label_position is below place the label outside the cistern */
+      .value-label.below {
+        bottom: -16px;
+      }
+
+      .in-tank-percent {
+        font-family: system-ui, Roboto, Arial;
+        font-weight: 700;
+        font-size: 18px;
+        text-anchor: middle;
       }
 
       .fuel-box {
@@ -256,6 +274,15 @@ class CisternLevelCard extends LitElement {
     const wave1 = this._makeWavePath(w, h, amplitude, wavelength, 0, waterHeightPx + 6);
     const wave2 = this._makeWavePath(w, h, amplitude * 0.6, wavelength * 0.8, 40, waterHeightPx + 4);
 
+    // compute in-tank percent text and color
+    const showInTank = !!this._config.show_in_tank_percent && levelPercent > 0.01;
+    const inTankText = `${Math.round(levelPercent * 100)}%`;
+    // choose color for in-tank text for contrast (white on deep water, dark on empty)
+    const inTankTextColor = levelPercent > 0.45 ? '#ffffff' : '#0f172a';
+
+    // choose if label is below
+    const labelBelow = String(this._config.label_position || 'below').trim().toLowerCase() === 'below';
+
     return html`
       <div class="card" style="--cistern-width:${w}px; --cistern-height:${h}px;">
         <div class="cistern-wrap" role="img" aria-label="Cistern level ${Math.round(levelPercent * 100)}%">
@@ -288,9 +315,11 @@ class CisternLevelCard extends LitElement {
               </filter>
             </defs>
 
+            <!-- cistern shell -->
             <rect x="12" y="12" width="${w - 24}" height="${h - 28}" rx="14" ry="14" fill="${bg}" stroke="#9aa9b6" stroke-width="3" />
             <rect x="${w / 2 - 18}" y="2" width="36" height="16" rx="6" ry="6" fill="${bg}" stroke="#9aa9b6" stroke-width="2" />
 
+            <!-- interior -->
             <g clip-path="url(#cisternClip)">
               <rect x="0" y="0" width="${w}" height="${h}" fill="url(#emptyGrad)" />
               <rect x="0" y="0" width="${w}" height="${waterHeightPx}" fill="url(#emptyGrad)" />
@@ -304,13 +333,20 @@ class CisternLevelCard extends LitElement {
 
               <rect x="0" y="${Math.max(0, waterHeightPx - 2)}" width="${w}" height="4" fill="rgba(0,0,0,0.06)" />
               <rect x="0" y="${waterHeightPx}" width="${w}" height="${h - waterHeightPx}" fill="transparent" filter="url(#innerShadow)" />
+
+              <!-- in-tank percent text (SVG text for crisp rendering) -->
+              ${showInTank ? html`<text class="in-tank-percent" x="${w/2}" y="${Math.max(waterHeightPx + 18, waterHeightPx + (h - waterHeightPx)/2 + 6)}" fill="${inTankTextColor}">${inTankText}</text>` : ''}
+
             </g>
 
-            <ellipse cx="${w / 2}" cy="${waterHeightPx - 16}" rx="${Math.max(16, w * 0.07)}" ry="4" fill="rgba(255,255,255,0.25)" />
+            <!-- small shine on water top -->
+            <ellipse cx="${w / 2}" cy="${Math.max(12, waterHeightPx - 16)}" rx="${Math.max(16, w * 0.07)}" ry="4" fill="rgba(255,255,255,0.25)" />
+
+            <!-- title -->
             <g transform="translate(12, ${h - 28})" fill="#49606f" opacity="0.6"><text x="${w - 48}" y="10" font-size="12" text-anchor="end" font-family="system-ui, Roboto, Arial">${this._config.title ?? ''}</text></g>
           </svg>
 
-          ${this._config.show_value ? html`<div class="value-label">${this._value == null ? "unavailable" : `${this._value}${this._unit ? " " + this._unit : ""}`}</div>` : ``}
+          ${this._config.show_value ? html`<div class="value-label ${labelBelow ? 'below' : ''}">${this._value == null ? "unavailable" : `${this._value}${this._unit ? " " + this._unit : ""}`}</div>` : ``}
 
           ${this._config.show_fuel ? html`
             <div class="fuel-box">
