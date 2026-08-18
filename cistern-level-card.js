@@ -231,7 +231,7 @@ class CisternLevelCard extends LitElement {
 
       /* when label_position is below place the label outside the cistern */
       .value-label.below {
-        bottom: -16px;
+        bottom: -1px;
       }
 
       .in-tank-percent {
