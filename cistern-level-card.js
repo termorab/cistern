@@ -252,7 +252,7 @@ class CisternLevelCard extends LitElement {
         bottom: 12px;
         text-align: right;
         font-size: 12px;
-        color: #475569;
+        color: #0f172a;
         background: rgba(255,255,255,0.95);
         padding: 6px 8px;
         border-radius: 8px;
@@ -373,7 +373,7 @@ class CisternLevelCard extends LitElement {
 
           ${this._config.show_fuel ? html`
             <div class="fuel-box ${labelBelow ? 'below' : ''}">
-              ${this._fuelValue == null ? html`<div>Fuel: —</div>` : html`<div>Fuel: ${this._fmtVal(this._fuelValue, this._config.fuel_decimals)} ${this._fuelUnit || ''}</div>`}
+              ${this._fuelValue == null ? html`<div>Vol: —</div>` : html`<div>Vol: ${this._fmtVal(this._fuelValue, this._config.fuel_decimals)} ${this._fuelUnit || ''}</div>`}
               ${this._fuelPercent != null ? html`<div style="font-size:11px; color:#64748b;">${Math.round(this._fuelPercent*100)}%</div>` : ''}
             </div>
           ` : ''}
