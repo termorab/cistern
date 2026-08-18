@@ -2,10 +2,7 @@
   cistern-level-card.js
   Added support for reading extra HA values (fuel value, capacity, extra entities)
   and showing them on the card. Keeps previous fixes for gradients and contrast.
-  Added features:
-   - in-tank percent overlay with automatic contrast inversion
-   - label_position option ("inside" or "below") with default "below"
-   - show_in_tank_percent option
+  Fixes: align bottom badges and add background to extras box for readability.
 */
 
 import { LitElement, html, css } from 'https://unpkg.com/lit@2.7.4/index.js?module';
@@ -14,25 +11,16 @@ const CARD_NAME = "Cistern Level Card";
 const CARD_VERSION = "1.0.0";
 const CARD_TAGLINE = `${CARD_NAME} v${CARD_VERSION}`;
 
-//console.info(CARD_TAGLINE);
-
-console.info(
-  `%c${CARD_TAGLINE}`,
-  [
-    "background: rgba(255,152,0,0.95)",
-    "color: #fff",
-    "padding: 4px 10px",
-    "border-radius: 10px",
-    "font-weight: 800",
-    "letter-spacing: 0.2px",
-    "border: 1px solid rgba(0,0,0,0.25)",
-    "box-shadow: 0 1px 0 rgba(0,0,0,0.15)"
-  ].join(";")
-);
-
-// Card tag + editor tag (reuse everywhere)
-const CARD_TAG = "andy-sensor-card";
-const EDITOR_TAG = "andy-sensor-card-editor";
+console.info(`%c${CARD_TAGLINE}`, [
+  "background: rgba(255,152,0,0.95)",
+  "color: #fff",
+  "padding: 4px 10px",
+  "border-radius: 10px",
+  "font-weight: 800",
+  "letter-spacing: 0.2px",
+  "border: 1px solid rgba(0,0,0,0.25)",
+  "box-shadow: 0 1px 0 rgba(0,0,0,0.15)"
+].join(";"));
 
 class CisternLevelCard extends LitElement {
   static get properties() {
@@ -136,7 +124,7 @@ class CisternLevelCard extends LitElement {
     this._value = rawVal;
     this._unit = this._getUnit(this._config.entity);
 
-    // compute main percent (existing behavior)
+    // compute main percent
     const min = Number(this._config.min);
     const max = Number(this._config.max);
     if (rawVal == null) {
@@ -163,7 +151,7 @@ class CisternLevelCard extends LitElement {
       }
     }
 
-    // capacity: from config, capacity_entity state, or an attribute on capacity_entity
+    // capacity
     let capacityVal = null;
     if (this._config.capacity != null) {
       const c = Number(this._config.capacity);
@@ -227,11 +215,12 @@ class CisternLevelCard extends LitElement {
         font-size: 13px;
         min-width: 56px;
         text-align: center;
+        z-index: 3;
       }
 
       /* when label_position is below place the label outside the cistern */
       .value-label.below {
-        bottom: -16px;
+        bottom: -22px;
       }
 
       .in-tank-percent {
@@ -253,7 +242,9 @@ class CisternLevelCard extends LitElement {
         font-size: 12px;
         border: 1px solid rgba(15,23,42,0.06);
         min-width: 72px;
+        z-index: 3;
       }
+      .fuel-box.below { bottom: -22px; }
 
       .extras-box {
         position: absolute;
@@ -262,7 +253,15 @@ class CisternLevelCard extends LitElement {
         text-align: right;
         font-size: 12px;
         color: #475569;
+        background: rgba(255,255,255,0.95);
+        padding: 6px 8px;
+        border-radius: 8px;
+        box-shadow: 0 3px 8px rgba(2,6,23,0.08);
+        border: 1px solid rgba(15,23,42,0.06);
+        min-width: 72px;
+        z-index: 3;
       }
+      .extras-box.below { bottom: -22px; }
 
       .wave { animation: waveMove 6s linear infinite; }
       .wave.slow { animation-duration: 10s; }
@@ -373,14 +372,14 @@ class CisternLevelCard extends LitElement {
           ${this._config.show_value ? html`<div class="value-label ${labelBelow ? 'below' : ''}">${this._value == null ? "unavailable" : `${this._value}${this._unit ? " " + this._unit : ""}`}</div>` : ``}
 
           ${this._config.show_fuel ? html`
-            <div class="fuel-box">
+            <div class="fuel-box ${labelBelow ? 'below' : ''}">
               ${this._fuelValue == null ? html`<div>Fuel: —</div>` : html`<div>Fuel: ${this._fmtVal(this._fuelValue, this._config.fuel_decimals)} ${this._fuelUnit || ''}</div>`}
               ${this._fuelPercent != null ? html`<div style="font-size:11px; color:#64748b;">${Math.round(this._fuelPercent*100)}%</div>` : ''}
             </div>
           ` : ''}
 
           ${this._extraValues && this._extraValues.length ? html`
-            <div class="extras-box">
+            <div class="extras-box ${labelBelow ? 'below' : ''}">
               ${this._extraValues.map(e => html`<div>${e.label}: ${e.value == null ? '—' : this._fmtVal(e.value, e.decimals)} ${e.unit || ''}</div>`) }
             </div>
           ` : ''}
