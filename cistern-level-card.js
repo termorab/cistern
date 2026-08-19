@@ -326,7 +326,6 @@ class CisternLevelCard extends LitElement {
       actionCfg = { action: actionCfg };
     }
     this._doAction(actionCfg, idx);
-    this.(actionCfg, idx);
   }
 
   // Execute supported actions: more-info, toggle, call-service, navigate, url, none
