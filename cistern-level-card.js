@@ -300,7 +300,7 @@ class CisternLevelCard extends LitElement {
     return path;
   }
   // action event handler used by actionHandler directive
-  _handleAction(ev: ActionHandlerEvent ) {
+  _handleAction(ev) {
     // ev.detail.action: "tap" | "hold" | "double_tap"
     const act = ev?.detail?.action;
     if (!act) return;
