@@ -1,17 +1,13 @@
 /*
   cistern-level-card.js
-  Added support for reading extra HA values (fuel value, capacity, extra entities)
-  and showing them on the card. Keeps previous fixes for gradients and contrast.
-  Fixes: align bottom badges and add background to extras box for readability.
+  Single-file version with inlined helpers for Home Assistant Lovelace.
+  - Inlined minimal action handling (tap + hold)
+  - Inlined hasAction helper
+  - Removed external imports that broke module loading when served from HACS
+  - Fixed stray call that would reference undefined variables
 */
 
 import { LitElement, html, css } from 'https://unpkg.com/lit@2.7.4/index.js?module';
-// import event handler for HASS
-import { ActionHandlerEvent } from "../../../data/lovelace/action_handler";
-import { actionHandler } from "../common/directives/action-handler-directive";
-import { findEntities } from "../common/find-entities";
-import { handleAction } from "../common/handle-action";
-import { hasAction } from "../common/has-action";
 
 const CARD_NAME = "Cistern Level Card";
 const CARD_VERSION = "1.0.0";
@@ -54,6 +50,22 @@ class CisternLevelCard extends LitElement {
     this._fuelPercent = null;
     this._extraValues = [];
     this._hass = null;
+
+    // hold timers map used by lightweight action handling
+    this._holdTimers = new WeakMap();
+    // hold threshold (ms)
+    this._holdThreshold = 600;
+  }
+
+  // Minimal helper that mirrors Home Assistant's hasAction behavior used in this card
+  // Accepts a possible action configuration and returns true if it constitutes an actionable config.
+  _hasAction(actionConfig) {
+    if (!actionConfig) return false;
+    if (typeof actionConfig === 'string') {
+      return actionConfig !== 'none';
+    }
+    const a = actionConfig.action || '';
+    return a && a !== 'none';
   }
 
   setConfig(config) {
@@ -84,7 +96,6 @@ class CisternLevelCard extends LitElement {
       // new UI options
       show_in_tank_percent: true,
       label_position: 'below',// 'inside' or 'below'
-
     }, config);
   }
 
@@ -192,7 +203,8 @@ class CisternLevelCard extends LitElement {
       const unit = it.unit || this._getAttribute(ent, 'unit_of_measurement') || '';
       return { label: it.label || ent, value: v, unit, decimals: (typeof it.decimals === 'number') ? it.decimals : 0 };
     });
-    this._doAction(actionCfg, idx);
+
+    // request update and render
     this.requestUpdate();
   }
 
@@ -202,9 +214,9 @@ class CisternLevelCard extends LitElement {
   get hasCardAction() {
    return (
      !this._config?.tap_action ||
-     hasAction(this._config?.tap_action) ||
-     hasAction(this._config?.hold_action) ||
-     hasAction(this._config?.double_tap_action)
+     this._hasAction(this._config?.tap_action) ||
+     this._hasAction(this._config?.hold_action) ||
+     this._hasAction(this._config?.double_tap_action)
    );
  }
 
@@ -299,7 +311,46 @@ class CisternLevelCard extends LitElement {
     path += ` L ${width + 100} ${height} L ${-width - 100} ${height} Z`;
     return path;
   }
-  // action event handler used by actionHandler directive
+
+  // Lightweight action handling helpers (tap + hold)
+  _startHold(e, idx) {
+    // normalize to element
+    const el = e.currentTarget;
+    // clear any existing timer first
+    this._clearHoldTimer(el);
+    const timer = setTimeout(() => {
+      // trigger hold action
+      this._handleAction({ detail: { action: 'hold' }, currentTarget: el });
+      this._holdTimers.delete(el);
+    }, this._holdThreshold);
+    // store timer
+    this._holdTimers.set(el, timer);
+  }
+
+  _clearHoldTimer(el) {
+    const t = this._holdTimers.get(el);
+    if (t) {
+      clearTimeout(t);
+      this._holdTimers.delete(el);
+    }
+  }
+
+  _endHold(e) {
+    const el = e.currentTarget;
+    const hadTimer = this._holdTimers.has(el);
+    this._clearHoldTimer(el);
+    // if timer existed but wasn't expired, treat as tap
+    if (hadTimer) {
+      this._handleAction({ detail: { action: 'tap' }, currentTarget: el });
+    }
+  }
+
+  _cancelHold(e) {
+    const el = e.currentTarget;
+    this._clearHoldTimer(el);
+  }
+
+  // action event handler used by our lightweight handler
   _handleAction(ev) {
     // ev.detail.action: "tap" | "hold" | "double_tap"
     const act = ev?.detail?.action;
@@ -337,6 +388,9 @@ class CisternLevelCard extends LitElement {
     if (typeof actionCfg === 'string') {
       actionCfg = { action: actionCfg };
     }
+
+    // finally execute action
+    this._doAction(actionCfg, idx);
   }
 
   // Execute supported actions: more-info, toggle, call-service, navigate, url, none
@@ -442,8 +496,12 @@ class CisternLevelCard extends LitElement {
         role="button"
         aria-label="Cistern level ${Math.round(levelPercent * 100)}%"
         tabindex="0"
-        @action=${this._handleAction}
-        .actionHandler=${actionHandler({ hasHold: true, hasDoubleClick: false })}
+        @mousedown=${(e) => this._startHold(e, null)}
+        @touchstart=${(e) => this._startHold(e, null)}
+        @mouseup=${(e) => this._endHold(e)}
+        @mouseleave=${(e) => this._cancelHold(e)}
+        @touchend=${(e) => this._endHold(e)}
+        @touchcancel=${(e) => this._cancelHold(e)}
         style="--cistern-width:${w}px; --cistern-height:${h}px;"
       >
           <svg viewBox="0 0 ${w} ${h}" width="${w}" height="${h}" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet">
@@ -523,8 +581,12 @@ class CisternLevelCard extends LitElement {
                   role="button"
                   tabindex="0"
                   data-index="${i}"
-                  @action=${this._handleAction}
-                  .actionHandler=${actionHandler({ hasHold: true, hasDoubleClick: false })}
+                  @mousedown=${(ev) => this._startHold(ev, i)}
+                  @touchstart=${(ev) => this._startHold(ev, i)}
+                  @mouseup=${(ev) => this._endHold(ev)}
+                  @mouseleave=${(ev) => this._cancelHold(ev)}
+                  @touchend=${(ev) => this._endHold(ev)}
+                  @touchcancel=${(ev) => this._cancelHold(ev)}
                   style="padding:2px 0;"
                 >
                   <div style="font-weight:600">${e.label}</div>
