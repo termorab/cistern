@@ -7,7 +7,7 @@
 
 import { LitElement, html, css } from 'https://unpkg.com/lit@2.7.4/index.js?module';
 // import event handler for HASS
-import type { ActionHandlerEvent } from "../../../data/lovelace/action_handler";
+import { ActionHandlerEvent } from "../../../data/lovelace/action_handler";
 import { actionHandler } from "../common/directives/action-handler-directive";
 import { findEntities } from "../common/find-entities";
 import { handleAction } from "../common/handle-action";
