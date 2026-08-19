@@ -582,7 +582,7 @@ _cancelHold(e) {
 
           ${this._config.show_value ? html`<div class="value-label ${labelBelow ? 'below' : ''}">${this._value == null ? "unavailable" : `${this._value}${this._unit ? " " + this._unit : ""}`}</div>` : ``}
 
-          {this._config.show_fuel ? html`
+          ${this._config.show_fuel ? html`
             <div
               class="fuel-box ${labelBelow ? 'below' : ''}"
               data-index="fuel"
