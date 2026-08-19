@@ -361,28 +361,33 @@ _cancelHold(e) {
     this._clearHoldTimer(el);
   }
 
-  // action event handler used by our lightweight handler
+   // action event handler used by our lightweight handler
   _handleAction(ev) {
     // ev.detail.action: "tap" | "hold" | "double_tap"
     const act = ev?.detail?.action;
     if (!act) return;
 
-    // If element that emitted has data-index -> it's an extra entity
+    // If element that emitted has data-index -> it's an extra entity (or 'fuel' for fuel box)
     const idx = ev.currentTarget?.dataset?.index;
     let actionCfg = null;
 
-    if (typeof idx !== 'undefined' && idx !== null && this._config.extra_entities && this._config.extra_entities[idx]) {
+    // special-case fuel box (data-index="fuel") -> use fuel_action / fuel_hold_action / fuel_double_tap_action
+    if (idx === 'fuel') {
+      if (act === 'hold' && this._config.fuel_hold_action) actionCfg = this._config.fuel_hold_action;
+      else if (act === 'double_tap' && this._config.fuel_double_tap_action) actionCfg = this._config.fuel_double_tap_action;
+      else actionCfg = this._config.fuel_action || this._config.tap_action;
+
+      // ensure fuel entity is present for the action if not provided
+      if (actionCfg && !actionCfg.entity) {
+        actionCfg = Object.assign({}, actionCfg, { entity: this._config.fuel_entity || null });
+      }
+    } else if (typeof idx !== 'undefined' && idx !== null && this._config.extra_entities && this._config.extra_entities[idx]) {
       // prefer per-extra action config
       const extraCfg = this._config.extra_entities[idx] || {};
       if (act === 'hold' && extraCfg.hold_action) actionCfg = extraCfg.hold_action;
       else if (act === 'double_tap' && extraCfg.double_tap_action) actionCfg = extraCfg.double_tap_action;
       else if (extraCfg.tap_action) actionCfg = extraCfg.tap_action;
-      
-      // special-case fuel box (data-index="fuel") -> use fuel_action / fuel_hold_action / fuel_double_tap_action
-      if (idx === 'fuel') {
-      if (act === 'hold' && this._config.fuel_hold_action) actionCfg = this._config.fuel_hold_action;
-      else if (act === 'double_tap' && this._config.fuel_double_tap_action) actionCfg = this._config.fuel_double_tap_action;
-      else actionCfg = this._config.fuel_action || this._config.tap_action;
+
       // ensure entity is present for the action if not provided
       if (actionCfg && !actionCfg.entity) {
         actionCfg = Object.assign({}, actionCfg, { entity: extraCfg.entity || extraCfg.entity_id || extraCfg.entityId || extraCfg.entity || null });
