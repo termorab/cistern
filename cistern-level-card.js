@@ -602,17 +602,7 @@ class CisternLevelCard extends LitElement {
       </div>
     `;
   }
-  onClicked() {
-  const event = new CustomEvent("hass-action", {
-    detail: {
-      config: this._config,
-      action: "tap",
-    },
-    bubbles: true,
-    composed: true,
-  });
-  this.dispatchEvent(event);
-}
+
 }
 
 customElements.define('cistern-level-card', CisternLevelCard);
