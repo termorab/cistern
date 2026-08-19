@@ -77,7 +77,15 @@ class CisternLevelCard extends LitElement {
       extra_entities: [],
       // new UI options
       show_in_tank_percent: true,
-      label_position: 'below' // 'inside' or 'below'
+      label_position: 'below',// 'inside' or 'below'
+      
+      tap_action: {
+        action: "more-info"
+      },
+      hold_action: {
+        action: "more-info"
+      }
+
     }, config);
   }
 
@@ -388,6 +396,17 @@ class CisternLevelCard extends LitElement {
       </div>
     `;
   }
+  onClicked() {
+  const event = new CustomEvent("hass-action", {
+    detail: {
+      config: this._config,
+      action: "tap",
+    },
+    bubbles: true,
+    composed: true,
+  });
+  this.dispatchEvent(event);
+}
 }
 
 customElements.define('cistern-level-card', CisternLevelCard);
