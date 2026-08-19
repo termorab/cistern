@@ -93,6 +93,8 @@ class CisternLevelCard extends LitElement {
       fuel_unit: "",
       fuel_decimals: 0,
       extra_entities: [],
+      // fuel specific action
+      fuel_action: null,
       // new UI options
       show_in_tank_percent: true,
       label_position: 'below',// 'inside' or 'below'
@@ -375,7 +377,12 @@ _cancelHold(e) {
       if (act === 'hold' && extraCfg.hold_action) actionCfg = extraCfg.hold_action;
       else if (act === 'double_tap' && extraCfg.double_tap_action) actionCfg = extraCfg.double_tap_action;
       else if (extraCfg.tap_action) actionCfg = extraCfg.tap_action;
-
+      
+      // special-case fuel box (data-index="fuel") -> use fuel_action / fuel_hold_action / fuel_double_tap_action
+      if (idx === 'fuel') {
+      if (act === 'hold' && this._config.fuel_hold_action) actionCfg = this._config.fuel_hold_action;
+      else if (act === 'double_tap' && this._config.fuel_double_tap_action) actionCfg = this._config.fuel_double_tap_action;
+      else actionCfg = this._config.fuel_action || this._config.tap_action;
       // ensure entity is present for the action if not provided
       if (actionCfg && !actionCfg.entity) {
         actionCfg = Object.assign({}, actionCfg, { entity: extraCfg.entity || extraCfg.entity_id || extraCfg.entityId || extraCfg.entity || null });
@@ -575,8 +582,17 @@ _cancelHold(e) {
 
           ${this._config.show_value ? html`<div class="value-label ${labelBelow ? 'below' : ''}">${this._value == null ? "unavailable" : `${this._value}${this._unit ? " " + this._unit : ""}`}</div>` : ``}
 
-          ${this._config.show_fuel ? html`
-            <div class="fuel-box ${labelBelow ? 'below' : ''}">
+          {this._config.show_fuel ? html`
+            <div
+              class="fuel-box ${labelBelow ? 'below' : ''}"
+              data-index="fuel"
+              @mousedown=${(e) => this._startHold(e, 'fuel')}
+              @touchstart=${(e) => this._startHold(e, 'fuel')}
+              @mouseup=${(e) => this._endHold(e)}
+              @mouseleave=${(e) => this._cancelHold(e)}
+              @touchend=${(e) => this._endHold(e)}
+              @touchcancel=${(e) => this._cancelHold(e)}
+            >
               ${this._fuelValue == null ? html`<div>Vol: —</div>` : html`<div>Vol: ${this._fmtVal(this._fuelValue, this._config.fuel_decimals)} ${this._fuelUnit || ''}</div>`}
               ${this._fuelPercent != null ? html`<div style="font-size:11px; color:#64748b;">${Math.round(this._fuelPercent*100)}%</div>` : ''}
             </div>
