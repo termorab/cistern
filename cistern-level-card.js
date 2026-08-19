@@ -7,7 +7,11 @@
 
 import { LitElement, html, css } from 'https://unpkg.com/lit@2.7.4/index.js?module';
 // import event handler for HASS
-import { actionHandler } from 'lovelace-common/directives/action-handler-directive';
+import type {
+  ActionHandlerDetail,
+  ActionHandlerOptions,
+  ActionHandlerResolution,
+} from "../../../../data/lovelace/action_handler";
 
 const CARD_NAME = "Cistern Level Card";
 const CARD_VERSION = "1.0.0";
