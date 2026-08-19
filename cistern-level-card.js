@@ -325,7 +325,7 @@ class CisternLevelCard extends LitElement {
     if (typeof actionCfg === 'string') {
       actionCfg = { action: actionCfg };
     }
-
+    this._doAction(actionCfg, idx);
     this.(actionCfg, idx);
   }
 
