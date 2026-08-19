@@ -7,7 +7,7 @@
 
 import { LitElement, html, css } from 'https://unpkg.com/lit@2.7.4/index.js?module';
 // import event handler for HASS
-import { actionHandler } from 'https://unpkg.com/custom-card-helpers@2.0.0/dist/index.js?module';
+import { actionHandler } from 'lovelace-common/directives/action-handler-directive';
 
 const CARD_NAME = "Cistern Level Card";
 const CARD_VERSION = "1.0.0";
@@ -326,7 +326,7 @@ class CisternLevelCard extends LitElement {
       actionCfg = { action: actionCfg };
     }
 
-    this._doAction(actionCfg, idx);
+    this.(actionCfg, idx);
   }
 
   // Execute supported actions: more-info, toggle, call-service, navigate, url, none
@@ -404,79 +404,6 @@ class CisternLevelCard extends LitElement {
     }
   }
 
-  // execute a simple action config: { action: 'more-info'|'toggle'|'call-service'|'navigate'|'url'|'none', ... }
-  _doAction(actionConfig) {
-    if (!actionConfig || actionConfig.action === 'none') return;
-
-    const action = actionConfig.action || 'more-info';
-    switch (action) {
-      case 'more-info': {
-        const entityId = actionConfig.entity || this._config.entity;
-        if (!entityId) return;
-        this.dispatchEvent(new CustomEvent('hass-more-info', {
-          detail: { entityId },
-          bubbles: true,
-          composed: true
-        }));
-        break;
-      }
-      case 'toggle': {
-        const entity = actionConfig.entity || this._config.entity;
-        if (!entity || !this._hass) return;
-        // homeassistant.toggle sometimes used; fallback to domain-specific turn_on/turn_off could be added.
-        this._hass.callService('homeassistant', 'toggle', { entity_id: entity });
-        break;
-      }
-      case 'call-service': {
-        // expected: actionConfig.service = 'domain.service' or {domain, service}
-        let domain, service;
-        if (typeof actionConfig.service === 'string') {
-          const parts = actionConfig.service.split('.');
-          domain = parts.shift();
-          service = parts.join('.');
-        } else if (actionConfig.service && actionConfig.service.domain && actionConfig.service.service) {
-          domain = actionConfig.service.domain;
-          service = actionConfig.service.service;
-        }
-        const serviceData = actionConfig.service_data || actionConfig.serviceData || {};
-        if (!domain || !service || !this._hass) return;
-        this._hass.callService(domain, service, serviceData);
-        break;
-      }
-      case 'navigate': {
-        // navigate to a Lovelace path
-        const path = actionConfig.navigation_path || actionConfig.path || actionConfig.navigationPath;
-        if (!path) return;
-        // Use the hass router if available, otherwise fallback to location.assign
-        if (this._hass && this._hass.connection && window.history && window.history.pushState) {
-          // It's common to use window.location = `/${path}` or dispatch 'navigate' events.
-          // Keep it simple:
-          window.location.href = path.startsWith('/') ? path : `/${path}`;
-        } else {
-          window.location.href = path;
-        }
-        break;
-      }
-      case 'url': {
-        const url = actionConfig.url || actionConfig.url_path || actionConfig.urlPath;
-        if (!url) return;
-        this._openUrl(url, actionConfig.target || '_blank');
-        break;
-      }
-      default:
-        // unknown action: do nothing
-        break;
-    }
-  }
-
-  _openUrl(url, target = '_blank') {
-    try {
-      if (target === '_self') window.location.href = url;
-      else window.open(url, target);
-    } catch (e) {
-      console.warn('Failed to open url', e);
-    }
-  }
   render() {
     const w = Number(this._config.width) || 320;
     const h = Number(this._config.height) || 220;
