@@ -6,6 +6,8 @@
 */
 
 import { LitElement, html, css } from 'https://unpkg.com/lit@2.7.4/index.js?module';
+// import event handler for HASS
+import { actionHandler } from 'https://unpkg.com/custom-card-helpers@0.9.4/index.js?module';
 
 const CARD_NAME = "Cistern Level Card";
 const CARD_VERSION = "1.0.0";
@@ -78,13 +80,6 @@ class CisternLevelCard extends LitElement {
       // new UI options
       show_in_tank_percent: true,
       label_position: 'below',// 'inside' or 'below'
-      
-      tap_action: {
-        action: "more-info"
-      },
-      hold_action: {
-        action: "more-info"
-      }
 
     }, config);
   }
@@ -205,7 +200,15 @@ class CisternLevelCard extends LitElement {
     return css`
       :host { display:block; box-sizing: border-box; }
       .card { width:100%; height:100%; box-sizing:border-box; display:flex; align-items:center; justify-content:center; padding:8px; }
-      .cistern-wrap { width: var(--cistern-width,320px); height: var(--cistern-height,220px); position:relative; }
+      <div
+        class="cistern-wrap"
+        role="button"
+        aria-label="Cistern level ${Math.round(levelPercent * 100)}%"
+        tabindex="0"
+        @action=${this._handleAction}
+        .actionHandler=${actionHandler({ hasHold: true, hasDoubleClick: false })}
+        style="--cistern-width:${w}px; --cistern-height:${h}px;"
+      >
 
       .value-label {
         position: absolute;
@@ -292,7 +295,196 @@ class CisternLevelCard extends LitElement {
     path += ` L ${width + 100} ${height} L ${-width - 100} ${height} Z`;
     return path;
   }
+  // action event handler used by actionHandler directive
+  _handleAction(ev) {
+    // ev.detail.action: "tap" | "hold" | "double_tap"
+    const act = ev?.detail?.action;
+    if (!act) return;
 
+    // If element that emitted has data-index -> it's an extra entity
+    const idx = ev.currentTarget?.dataset?.index;
+    let actionCfg = null;
+
+    if (typeof idx !== 'undefined' && idx !== null && this._config.extra_entities && this._config.extra_entities[idx]) {
+      // prefer per-extra action config
+      const extraCfg = this._config.extra_entities[idx] || {};
+      if (act === 'hold' && extraCfg.hold_action) actionCfg = extraCfg.hold_action;
+      else if (act === 'double_tap' && extraCfg.double_tap_action) actionCfg = extraCfg.double_tap_action;
+      else if (extraCfg.tap_action) actionCfg = extraCfg.tap_action;
+
+      // ensure entity is present for the action if not provided
+      if (actionCfg && !actionCfg.entity) {
+        actionCfg = Object.assign({}, actionCfg, { entity: extraCfg.entity || extraCfg.entity_id || extraCfg.entityId || extraCfg.entity || null });
+      }
+
+      // if no per-extra action found, fall back to card-level
+      if (!actionCfg) {
+        if (act === 'hold' && this._config.hold_action) actionCfg = this._config.hold_action;
+        else actionCfg = this._config.tap_action;
+      }
+    } else {
+      // not an extra item: main card/fuel: pick based on act
+      if (act === 'hold' && this._config.hold_action) actionCfg = this._config.hold_action;
+      else if (act === 'double_tap' && this._config.double_tap_action) actionCfg = this._config.double_tap_action;
+      else actionCfg = this._config.tap_action;
+    }
+
+    // If actionCfg is string (legacy) allow passing through, but expect object
+    if (typeof actionCfg === 'string') {
+      actionCfg = { action: actionCfg };
+    }
+
+    this._doAction(actionCfg, idx);
+  }
+
+  // Execute supported actions: more-info, toggle, call-service, navigate, url, none
+  _doAction(actionConfig = {}, idx = null) {
+    if (!actionConfig || actionConfig.action === 'none') return;
+
+    const action = actionConfig.action || 'more-info';
+    switch (action) {
+      case 'more-info': {
+        // prefer explicit entity in actionConfig, fall back to extra_entities[idx].entity or card entity
+        const entityId = actionConfig.entity || (idx != null && this._config.extra_entities && this._config.extra_entities[idx] && this._config.extra_entities[idx].entity) || this._config.entity;
+        if (!entityId) return;
+        this.dispatchEvent(new CustomEvent('hass-more-info', {
+          detail: { entityId },
+          bubbles: true,
+          composed: true
+        }));
+        break;
+      }
+      case 'toggle': {
+        const entity = actionConfig.entity || (idx != null && this._config.extra_entities && this._config.extra_entities[idx] && this._config.extra_entities[idx].entity) || this._config.entity;
+        if (!entity || !this._hass) return;
+        this._hass.callService('homeassistant', 'toggle', { entity_id: entity });
+        break;
+      }
+      case 'call-service': {
+        // accept either actionConfig.service = "domain.service" or { domain, service }
+        let domain, service;
+        if (typeof actionConfig.service === 'string') {
+          const parts = actionConfig.service.split('.');
+          domain = parts.shift();
+          service = parts.join('.');
+        } else if (actionConfig.service && actionConfig.service.domain && actionConfig.service.service) {
+          domain = actionConfig.service.domain;
+          service = actionConfig.service.service;
+        } else if (actionConfig.service_domain && actionConfig.service && actionConfig.service_name) {
+          domain = actionConfig.service_domain;
+          service = actionConfig.service_name;
+        }
+        const serviceData = actionConfig.service_data || actionConfig.serviceData || {};
+        // If entity provided in actionConfig or the extra config, merge into service data if it uses entity_id
+        if (!serviceData.entity_id) {
+          const e = actionConfig.entity || (idx != null && this._config.extra_entities && this._config.extra_entities[idx] && this._config.extra_entities[idx].entity) || this._config.entity;
+          if (e) serviceData.entity_id = e;
+        }
+        if (!domain || !service || !this._hass) return;
+        this._hass.callService(domain, service, serviceData);
+        break;
+      }
+      case 'navigate': {
+        const path = actionConfig.navigation_path || actionConfig.path || actionConfig.navigationPath;
+        if (!path) return;
+        // Simple navigation — full SPA routing could be used instead if desired
+        window.location.href = path.startsWith('/') ? path : `/${path}`;
+        break;
+      }
+      case 'url': {
+        const url = actionConfig.url || actionConfig.url_path || actionConfig.urlPath;
+        if (!url) return;
+        this._openUrl(url, actionConfig.target || '_blank');
+        break;
+      }
+      default:
+        // unknown action type: no-op
+        break;
+    }
+  }
+
+  _openUrl(url, target = '_blank') {
+    try {
+      if (target === '_self') window.location.href = url;
+      else window.open(url, target);
+    } catch (e) {
+      console.warn('Failed to open url', e);
+    }
+  }
+
+  // execute a simple action config: { action: 'more-info'|'toggle'|'call-service'|'navigate'|'url'|'none', ... }
+  _doAction(actionConfig) {
+    if (!actionConfig || actionConfig.action === 'none') return;
+
+    const action = actionConfig.action || 'more-info';
+    switch (action) {
+      case 'more-info': {
+        const entityId = actionConfig.entity || this._config.entity;
+        if (!entityId) return;
+        this.dispatchEvent(new CustomEvent('hass-more-info', {
+          detail: { entityId },
+          bubbles: true,
+          composed: true
+        }));
+        break;
+      }
+      case 'toggle': {
+        const entity = actionConfig.entity || this._config.entity;
+        if (!entity || !this._hass) return;
+        // homeassistant.toggle sometimes used; fallback to domain-specific turn_on/turn_off could be added.
+        this._hass.callService('homeassistant', 'toggle', { entity_id: entity });
+        break;
+      }
+      case 'call-service': {
+        // expected: actionConfig.service = 'domain.service' or {domain, service}
+        let domain, service;
+        if (typeof actionConfig.service === 'string') {
+          const parts = actionConfig.service.split('.');
+          domain = parts.shift();
+          service = parts.join('.');
+        } else if (actionConfig.service && actionConfig.service.domain && actionConfig.service.service) {
+          domain = actionConfig.service.domain;
+          service = actionConfig.service.service;
+        }
+        const serviceData = actionConfig.service_data || actionConfig.serviceData || {};
+        if (!domain || !service || !this._hass) return;
+        this._hass.callService(domain, service, serviceData);
+        break;
+      }
+      case 'navigate': {
+        // navigate to a Lovelace path
+        const path = actionConfig.navigation_path || actionConfig.path || actionConfig.navigationPath;
+        if (!path) return;
+        // Use the hass router if available, otherwise fallback to location.assign
+        if (this._hass && this._hass.connection && window.history && window.history.pushState) {
+          // It's common to use window.location = `/${path}` or dispatch 'navigate' events.
+          // Keep it simple:
+          window.location.href = path.startsWith('/') ? path : `/${path}`;
+        } else {
+          window.location.href = path;
+        }
+        break;
+      }
+      case 'url': {
+        const url = actionConfig.url || actionConfig.url_path || actionConfig.urlPath;
+        if (!url) return;
+        this._openUrl(url, actionConfig.target || '_blank');
+        break;
+      }
+      default:
+        // unknown action: do nothing
+        break;
+    }
+  }
+
+  _openUrl(url, target = '_blank') {
+    try {
+      if (target === '_self') window.location.href = url;
+      else window.open(url, target);
+    } catch (e) {
+      console.warn('Failed to open url', e);
+    }
+  }
   render() {
     const w = Number(this._config.width) || 320;
     const h = Number(this._config.height) || 220;
@@ -388,10 +580,24 @@ class CisternLevelCard extends LitElement {
 
           ${this._extraValues && this._extraValues.length ? html`
             <div class="extras-box ${labelBelow ? 'below' : ''}">
-              ${this._extraValues.map(e => html`<div>${e.label}: ${e.value == null ? '—' : this._fmtVal(e.value, e.decimals)} ${e.unit || ''}</div>`) }
+              ${this._extraValues.map((e, i) => html`
+                <div
+                  class="extra-item"
+                  role="button"
+                  tabindex="0"
+                  data-index="${i}"
+                  @action=${this._handleAction}
+                  .actionHandler=${actionHandler({ hasHold: true, hasDoubleClick: false })}
+                  style="padding:2px 0;"
+                >
+                  <div style="font-weight:600">${e.label}</div>
+                  <div style="font-size:12px; color: #334155;">
+                    ${e.value == null ? '—' : this._fmtVal(e.value, e.decimals)} ${e.unit || ''}
+                  </div>
+                </div>
+              `)}
             </div>
           ` : ''}
-
         </div>
       </div>
     `;
