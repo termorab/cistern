@@ -188,7 +188,7 @@ class CisternLevelCard extends LitElement {
       const unit = it.unit || this._getAttribute(ent, 'unit_of_measurement') || '';
       return { label: it.label || ent, value: v, unit, decimals: (typeof it.decimals === 'number') ? it.decimals : 0 };
     });
-
+    this._doAction(actionCfg, idx);
     this.requestUpdate();
   }
 
@@ -325,7 +325,6 @@ class CisternLevelCard extends LitElement {
     if (typeof actionCfg === 'string') {
       actionCfg = { action: actionCfg };
     }
-    this._doAction(actionCfg, idx);
   }
 
   // Execute supported actions: more-info, toggle, call-service, navigate, url, none
