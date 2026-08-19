@@ -7,7 +7,7 @@
 
 import { LitElement, html, css } from 'https://unpkg.com/lit@2.7.4/index.js?module';
 // import event handler for HASS
-//import { actionHandler } from 'https://unpkg.com/custom-card-helpers@0.9.4/index.js?module';
+import { actionHandler } from 'https://unpkg.com/custom-card-helpers@2.0.0/dist/index.js?module';
 
 const CARD_NAME = "Cistern Level Card";
 const CARD_VERSION = "1.0.0";
