@@ -89,11 +89,6 @@ class CisternLevelCard extends LitElement {
     }, config);
   }
 
-  // --- EventListener for click/tap ---
-  connectedCallback() {
-    }
-
- 
   // --- helpers to read HA state/attrs ---
   _getRawState(entityId) {
     return this._hass?.states?.[entityId] ?? null;
@@ -127,22 +122,6 @@ class CisternLevelCard extends LitElement {
     const n = Number(v);
     if (!Number.isFinite(n)) return String(v);
     return decimals != null ? Number(n).toFixed(decimals) : String(n);
-  }
-
-  _showMoreInfo(entityId) {
-    if (typeof entityId !== 'string' || entityId.trim() === '') return;
-
-    const event = new Event('hass-more-info', {
-      bubbles: true,
-      composed: true
-    });
-
-    event.detail = {
-      entityId: entityId,
-      view: 'info'
-    };
-
-    this.dispatchEvent(event);
   }
 
   set hass(hass) {
@@ -398,10 +377,10 @@ class CisternLevelCard extends LitElement {
             <g transform="translate(12, ${h - 28})" fill="#49606f" opacity="0.6"><text x="${w - 48}" y="10" font-size="12" text-anchor="end" font-family="system-ui, Roboto, Arial">${this._config.title ?? ''}</text></g>
           </svg>
 
-          ${this._config.show_value ? html`<div class="value-label ${labelBelow ? 'below' : ''}" @click=${() => this._showMoreInfo(this._config.entity)}>${this._value == null ? "unavailable" : `${this._value}${this._unit ? " " + this._unit : ""}`}</div>` : ``}
+          ${this._config.show_value ? html`<div class="value-label ${labelBelow ? 'below' : ''}">${this._value == null ? "unavailable" : `${this._value}${this._unit ? " " + this._unit : ""}`}</div>` : ``}
 
           ${this._config.show_fuel ? html`
-            <div class="fuel-box ${labelBelow ? 'below' : ''}" @click=${() => this._showMoreInfo(this._config.fuel_entity || this._config.capacity_entity)}>
+            <div class="fuel-box ${labelBelow ? 'below' : ''}">
               ${this._fuelValue == null ? html`<div>Vol: —</div>` : html`<div>Vol: ${this._fmtVal(this._fuelValue, this._config.fuel_decimals)} ${this._fuelUnit || ''}</div>`}
               ${this._fuelPercent != null ? html`<div style="font-size:11px; color:#64748b;">${Math.round(this._fuelPercent*100)}%</div>` : ''}
             </div>
@@ -409,7 +388,7 @@ class CisternLevelCard extends LitElement {
 
           ${this._extraValues && this._extraValues.length ? html`
             <div class="extras-box ${labelBelow ? 'below' : ''}">
-              ${this._extraValues.map((e, index) => html`<div @click=${() => this._showMoreInfo(this._config.extra_entities[index]?.entity)}>${e.label}: ${e.value == null ? '—' : this._fmtVal(e.value, e.decimals)} ${e.unit || ''}</div>`) }
+              ${this._extraValues.map(e => html`<div>${e.label}: ${e.value == null ? '—' : this._fmtVal(e.value, e.decimals)} ${e.unit || ''}</div>`) }
             </div>
           ` : ''}
 
@@ -417,8 +396,17 @@ class CisternLevelCard extends LitElement {
       </div>
     `;
   }
-  
-
+  onClicked() {
+  const event = new CustomEvent("hass-action", {
+    detail: {
+      config: this._config,
+      action: "tap",
+    },
+    bubbles: true,
+    composed: true,
+  });
+  this.dispatchEvent(event);
+}
 }
 
 customElements.define('cistern-level-card', CisternLevelCard);
