@@ -314,16 +314,19 @@ class CisternLevelCard extends LitElement {
 
   // Lightweight action handling helpers (tap + hold)
   _startHold(e, idx) {
-    // normalize to element
+    // stop parent handlers from receiving this same event (prevents double-run)
+    e.stopPropagation();
+    // prevent synthetic mouse events after touchstart
+    if (e.type && e.type.startsWith && e.type.startsWith('touch')) {
+      e.preventDefault();
+    }
+  
     const el = e.currentTarget;
-    // clear any existing timer first
     this._clearHoldTimer(el);
     const timer = setTimeout(() => {
-      // trigger hold action
       this._handleAction({ detail: { action: 'hold' }, currentTarget: el });
       this._holdTimers.delete(el);
     }, this._holdThreshold);
-    // store timer
     this._holdTimers.set(el, timer);
   }
 
@@ -336,14 +339,20 @@ class CisternLevelCard extends LitElement {
   }
 
   _endHold(e) {
-    const el = e.currentTarget;
-    const hadTimer = this._holdTimers.has(el);
-    this._clearHoldTimer(el);
-    // if timer existed but wasn't expired, treat as tap
-    if (hadTimer) {
-      this._handleAction({ detail: { action: 'tap' }, currentTarget: el });
-    }
+  e.stopPropagation();
+  const el = e.currentTarget;
+  const hadTimer = this._holdTimers.has(el);
+  this._clearHoldTimer(el);
+  if (hadTimer) {
+    this._handleAction({ detail: { action: 'tap' }, currentTarget: el });
   }
+}
+
+_cancelHold(e) {
+  e.stopPropagation();
+  const el = e.currentTarget;
+  this._clearHoldTimer(el);
+}
 
   _cancelHold(e) {
     const el = e.currentTarget;
