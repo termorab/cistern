@@ -200,15 +200,7 @@ class CisternLevelCard extends LitElement {
     return css`
       :host { display:block; box-sizing: border-box; }
       .card { width:100%; height:100%; box-sizing:border-box; display:flex; align-items:center; justify-content:center; padding:8px; }
-      <div
-        class="cistern-wrap"
-        role="button"
-        aria-label="Cistern level ${Math.round(levelPercent * 100)}%"
-        tabindex="0"
-        @action=${this._handleAction}
-        .actionHandler=${actionHandler({ hasHold: true, hasDoubleClick: false })}
-        style="--cistern-width:${w}px; --cistern-height:${h}px;"
-      >
+      .cistern-wrap { width: var(--cistern-width,320px); height: var(--cistern-height,220px); position:relative; }
 
       .value-label {
         position: absolute;
@@ -508,7 +500,15 @@ class CisternLevelCard extends LitElement {
 
     return html`
       <div class="card" style="--cistern-width:${w}px; --cistern-height:${h}px;">
-        <div class="cistern-wrap" role="img" aria-label="Cistern level ${Math.round(levelPercent * 100)}%">
+      <div
+        class="cistern-wrap"
+        role="button"
+        aria-label="Cistern level ${Math.round(levelPercent * 100)}%"
+        tabindex="0"
+        @action=${this._handleAction}
+        .actionHandler=${actionHandler({ hasHold: true, hasDoubleClick: false })}
+        style="--cistern-width:${w}px; --cistern-height:${h}px;"
+      >
           <svg viewBox="0 0 ${w} ${h}" width="${w}" height="${h}" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet">
             <defs>
               <linearGradient id="waterGrad" x1="0" x2="0" y1="0" y2="1">
