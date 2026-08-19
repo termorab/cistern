@@ -7,11 +7,11 @@
 
 import { LitElement, html, css } from 'https://unpkg.com/lit@2.7.4/index.js?module';
 // import event handler for HASS
-import type {
-  ActionHandlerDetail,
-  ActionHandlerOptions,
-  ActionHandlerResolution,
-} from "../../../../data/lovelace/action_handler";
+import type { ActionHandlerEvent } from "../../../data/lovelace/action_handler";
+import { actionHandler } from "../common/directives/action-handler-directive";
+import { findEntities } from "../common/find-entities";
+import { handleAction } from "../common/handle-action";
+import { hasAction } from "../common/has-action";
 
 const CARD_NAME = "Cistern Level Card";
 const CARD_VERSION = "1.0.0";
@@ -199,6 +199,14 @@ class CisternLevelCard extends LitElement {
   getCardSize() {
     return Math.ceil((this._config.height || 220) / 50);
   }
+  get hasCardAction() {
+   return (
+     !this._config?.tap_action ||
+     hasAction(this._config?.tap_action) ||
+     hasAction(this._config?.hold_action) ||
+     hasAction(this._config?.double_tap_action)
+   );
+ }
 
   static get styles() {
     return css`
@@ -292,7 +300,7 @@ class CisternLevelCard extends LitElement {
     return path;
   }
   // action event handler used by actionHandler directive
-  _handleAction(ev) {
+  _handleAction(ev:ActionHandlerEvent ) {
     // ev.detail.action: "tap" | "hold" | "double_tap"
     const act = ev?.detail?.action;
     if (!act) return;
