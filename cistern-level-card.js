@@ -154,14 +154,13 @@ class CisternLevelCard extends LitElement {
     } else {
       let p = (rawVal - min) / (max - min);
       if (Number.isNaN(p)) p = 0;
-      p = Math.max(0, Math.min(1, p));
       this._percent = p;
     }
 
     // fuel value & capacity
     this._fuelValue = null;
     this._fuelUnit = this._config.fuel_unit || "";
-    this._fuelPercent = null;
+    this._fuelPercent = this._percent;
 
     if (this._config.fuel_entity) {
       const fv = this._getNumber(this._config.fuel_entity, null);
@@ -372,7 +371,7 @@ _cancelHold(e) {
     let actionCfg = null;
 
     // special-case fuel box (data-index="fuel") -> use fuel_action / fuel_hold_action / fuel_double_tap_action
-    if (idx === 'fuel_entity') {
+    if (idx === 'fuel') {
       if (act === 'hold' && this._config.fuel_hold_action) actionCfg = this._config.fuel_hold_action;
       else if (act === 'double_tap' && this._config.fuel_double_tap_action) actionCfg = this._config.fuel_double_tap_action;
       else actionCfg = this._config.fuel_action || this._config.tap_action;
