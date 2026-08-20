@@ -372,7 +372,7 @@ _cancelHold(e) {
     let actionCfg = null;
 
     // special-case fuel box (data-index="fuel") -> use fuel_action / fuel_hold_action / fuel_double_tap_action
-    if (idx === 'fuel') {
+    if (idx === 'fuel_entity') {
       if (act === 'hold' && this._config.fuel_hold_action) actionCfg = this._config.fuel_hold_action;
       else if (act === 'double_tap' && this._config.fuel_double_tap_action) actionCfg = this._config.fuel_double_tap_action;
       else actionCfg = this._config.fuel_action || this._config.tap_action;
@@ -422,7 +422,7 @@ _cancelHold(e) {
     switch (action) {
       case 'more-info': {
         // prefer explicit entity in actionConfig, fall back to extra_entities[idx].entity or card entity
-        const entityId = actionConfig.entity || (idx != null && this._config.extra_entities && this._config.extra_entities[idx] && this._config.extra_entities[idx].entity) || this._config.entity;
+        const entityId = actionConfig.entity || (idx != null && this._config.extra_entities && this._config.extra_entities[idx] && this._config.extra_entities[idx].entity) || this._config.entity || this._config.fuel_entity;
         if (!entityId) return;
         this.dispatchEvent(new CustomEvent('hass-more-info', {
           detail: { entityId },
@@ -432,7 +432,7 @@ _cancelHold(e) {
         break;
       }
       case 'toggle': {
-        const entity = actionConfig.entity || (idx != null && this._config.extra_entities && this._config.extra_entities[idx] && this._config.extra_entities[idx].entity) || this._config.entity;
+        const entity = actionConfig.entity || (idx != null && this._config.extra_entities && this._config.extra_entities[idx] && this._config.extra_entities[idx].entity) || this._config.entity || this._config.fuel_entity;
         if (!entity || !this._hass) return;
         this._hass.callService('homeassistant', 'toggle', { entity_id: entity });
         break;
@@ -454,7 +454,7 @@ _cancelHold(e) {
         const serviceData = actionConfig.service_data || actionConfig.serviceData || {};
         // If entity provided in actionConfig or the extra config, merge into service data if it uses entity_id
         if (!serviceData.entity_id) {
-          const e = actionConfig.entity || (idx != null && this._config.extra_entities && this._config.extra_entities[idx] && this._config.extra_entities[idx].entity) || this._config.entity;
+          const e = actionConfig.entity || (idx != null && this._config.extra_entities && this._config.extra_entities[idx] && this._config.extra_entities[idx].entity) || this._config.entity || this._config.fuel_entity;
           if (e) serviceData.entity_id = e;
         }
         if (!domain || !service || !this._hass) return;
