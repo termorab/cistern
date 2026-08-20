@@ -158,8 +158,7 @@ class CisternLevelCard extends LitElement {
     }
 
     // fuel value & capacity
-    this._fuelValue = null;
-    this._fuelUnit = this._config.fuel_unit || "";
+   
     this._fuelPercent = this._percent;
 
     if (this._config.fuel_entity) {
@@ -170,7 +169,7 @@ class CisternLevelCard extends LitElement {
       }
     }
 
-    // capacity
+ /*    // capacity
     let capacityVal = null;
     if (this._config.capacity != null) {
       const c = Number(this._config.capacity);
@@ -192,7 +191,7 @@ class CisternLevelCard extends LitElement {
       this._fuelPercent = Math.max(0, Math.min(1, this._fuelValue / capacityVal));
     } else {
       this._fuelPercent = null;
-    }
+    } */
 
     // extras
     this._extraValues = (this._config.extra_entities || []).map((it) => {
