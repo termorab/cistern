@@ -516,11 +516,6 @@ _cancelHold(e) {
         aria-label="Cistern level ${Math.round(levelPercent * 100)}%"
         tabindex="0"
         @mousedown=${(e) => this._startHold(e, null)}
-        @touchstart=${(e) => this._startHold(e, null)}
-        @mouseup=${(e) => this._endHold(e)}
-        @mouseleave=${(e) => this._cancelHold(e)}
-        @touchend=${(e) => this._endHold(e)}
-        @touchcancel=${(e) => this._cancelHold(e)}
         style="--cistern-width:${w}px; --cistern-height:${h}px;"
       >
           <svg viewBox="0 0 ${w} ${h}" width="${w}" height="${h}" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet">
