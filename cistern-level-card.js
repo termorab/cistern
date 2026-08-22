@@ -515,7 +515,7 @@ _cancelHold(e) {
         role="button"
         aria-label="Cistern level ${Math.round(levelPercent * 100)}%"
         tabindex="0"
-        @mousedown=${(e) => this._startHold(e, null)}
+        @mouseup=${(e) => this._startHold(e, null)}
         style="--cistern-width:${w}px; --cistern-height:${h}px;"
       >
           <svg viewBox="0 0 ${w} ${h}" width="${w}" height="${h}" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet">
