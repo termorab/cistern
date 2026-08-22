@@ -584,12 +584,7 @@ _cancelHold(e) {
             <div
               class="fuel-box ${labelBelow ? 'below' : ''}"
               data-index="fuel"
-              @mousedown=${(e) => this._startHold(e, 'fuel')}
-              @touchstart=${(e) => this._startHold(e, 'fuel')}
               @mouseup=${(e) => this._endHold(e)}
-              @mouseleave=${(e) => this._cancelHold(e)}
-              @touchend=${(e) => this._endHold(e)}
-              @touchcancel=${(e) => this._cancelHold(e)}
             >
               ${this._fuelValue == null ? html`<div>Vol: —</div>` : html`<div>Vol: ${this._fmtVal(this._fuelValue, this._config.fuel_decimals)} ${this._fuelUnit || ''}</div>`}
               ${this._fuelPercent != null ? html`<div style="font-size:11px; color:#64748b;">${Math.round(this._fuelPercent*100)}%</div>` : ''}
@@ -604,12 +599,7 @@ _cancelHold(e) {
                   role="button"
                   tabindex="0"
                   data-index="${i}"
-                  @mousedown=${(ev) => this._startHold(ev, i)}
-                  @touchstart=${(ev) => this._startHold(ev, i)}
                   @mouseup=${(ev) => this._endHold(ev)}
-                  @mouseleave=${(ev) => this._cancelHold(ev)}
-                  @touchend=${(ev) => this._endHold(ev)}
-                  @touchcancel=${(ev) => this._cancelHold(ev)}
                   style="padding:2px 0;"
                 >
                   <div style="font-weight:600">${e.label}</div>
